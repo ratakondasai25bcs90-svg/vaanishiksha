@@ -1,0 +1,44 @@
+# Core framework
+fastapi==0.115.0
+uvicorn[standard]==0.31.0
+python-multipart==0.0.12
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.35
+alembic==1.13.3
+
+# Redis and job queue
+redis==5.1.1
+celery==5.4.0
+
+# ASR (Speech-to-Text)
+# Commented out for initial setup - large dependencies, install separately when needed
+# faster-whisper==1.0.3
+
+# Translation - commented out for initial setup
+# transformers==4.45.2
+# torch==2.4.1
+# sentencepiece==0.2.0
+# sacremoses==0.1.1
+
+# TTS (Text-to-Speech)
+gtts==2.5.3
+
+# Storage and file handling
+boto3==1.35.26
+python-magic==0.4.27
+pydub==0.25.1
+
+# Auth and security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.1
+
+# Utilities
+pydantic==2.9.2
+pydantic-settings==2.5.2
+httpx==0.27.2
+
+# AI APIs
+google-generativeai==0.8.3
