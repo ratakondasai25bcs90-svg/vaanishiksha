@@ -55,20 +55,19 @@ def _translate_with_indictrans2(text: str, source_lang: str, target_lang: str) -
 
 def _translate_with_llm(text: str, source_lang: str, target_lang: str) -> str:
     """
-    Translate using Omniroute's Gemini-compatible endpoint.
+    Translate using Omniroute's OpenAI-compatible endpoint.
     
-    Note: Uses Omniroute (local AI gateway) instead of Google's Gemini API directly.
-    Requires GEMINI_API_KEY in .env to be set to an Omniroute unified key (format: omnikey-g-...).
+    Note: Uses Omniroute (local AI gateway) with kr/claude-sonnet-4.5 model.
+    Requires GEMINI_API_KEY in .env to be set to an Omniroute unified key.
     """
     from app.config import settings
     import httpx
-    import json
     
     if not settings.gemini_api_key:
-        raise ValueError("No Omniroute API key configured. Set GEMINI_API_KEY in .env to your Omniroute key (omnikey-g-...)")
+        raise ValueError("No Omniroute API key configured. Set GEMINI_API_KEY in .env to your Omniroute key")
     
-    # Omniroute's Gemini-compatible endpoint
-    omniroute_base_url = "http://localhost:20128/v1beta"
+    # Omniroute's OpenAI-compatible endpoint
+    omniroute_base_url = "http://localhost:20128/v1"
     
     # Language names for better prompting
     lang_names = settings.language_names
@@ -83,18 +82,17 @@ Text to translate:
 
 Translation:"""
     
-    # Call Omniroute using Gemini API format
-    url = f"{omniroute_base_url}/models/gemini-pro:generateContent"
+    # Call Omniroute using OpenAI API format
+    url = f"{omniroute_base_url}/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "x-goog-api-key": settings.gemini_api_key
+        "Authorization": f"Bearer {settings.gemini_api_key}"
     }
     payload = {
-        "contents": [{
-            "parts": [{
-                "text": prompt
-            }]
-        }]
+        "model": "kr/claude-sonnet-4.5",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
     }
     
     try:
@@ -103,13 +101,11 @@ Translation:"""
             response.raise_for_status()
             
             result = response.json()
-            # Extract text from Gemini API response format
-            if "candidates" in result and len(result["candidates"]) > 0:
-                candidate = result["candidates"][0]
-                if "content" in candidate and "parts" in candidate["content"]:
-                    parts = candidate["content"]["parts"]
-                    if len(parts) > 0 and "text" in parts[0]:
-                        return parts[0]["text"].strip()
+            # Extract text from OpenAI API response format
+            if "choices" in result and len(result["choices"]) > 0:
+                message = result["choices"][0]["message"]
+                if "content" in message:
+                    return message["content"].strip()
             
             raise ValueError(f"Unexpected response format from Omniroute: {result}")
     
