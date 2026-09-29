@@ -22,8 +22,7 @@ celery==5.4.0
 # sentencepiece==0.2.0
 # sacremoses==0.1.1
 
-# TTS (Text-to-Speech)
-gtts==2.5.3
+#=2.5.3
 
 # Storage and file handling
 boto3==1.35.26

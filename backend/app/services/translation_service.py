@@ -55,19 +55,20 @@ def _translate_with_indictrans2(text: str, source_lang: str, target_lang: str) -
 
 def _translate_with_llm(text: str, source_lang: str, target_lang: str) -> str:
     """
-    Translate using an LLM API (e.g., Gemini, GPT).
+    Translate using Omniroute's Gemini-compatible endpoint.
     
-    Note: Requires API key to be configured.
+    Note: Uses Omniroute (local AI gateway) instead of Google's Gemini API directly.
+    Requires GEMINI_API_KEY in .env to be set to an Omniroute unified key (format: omnikey-g-...).
     """
     from app.config import settings
+    import httpx
+    import json
     
     if not settings.gemini_api_key:
-        raise ValueError("No API key configured for translation. Set GEMINI_API_KEY in .env")
+        raise ValueError("No Omniroute API key configured. Set GEMINI_API_KEY in .env to your Omniroute key (omnikey-g-...)")
     
-    import google.generativeai as genai
-    
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel('gemini-pro')
+    # Omniroute's Gemini-compatible endpoint
+    omniroute_base_url = "http://localhost:20128/v1beta"
     
     # Language names for better prompting
     lang_names = settings.language_names
@@ -82,5 +83,37 @@ Text to translate:
 
 Translation:"""
     
-    response = model.generate_content(prompt)
-    return response.text.strip()
+    # Call Omniroute using Gemini API format
+    url = f"{omniroute_base_url}/models/gemini-pro:generateContent"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": settings.gemini_api_key
+    }
+    payload = {
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }]
+    }
+    
+    try:
+        with httpx.Client(timeout=60.0) as client:
+            response = client.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            
+            result = response.json()
+            # Extract text from Gemini API response format
+            if "candidates" in result and len(result["candidates"]) > 0:
+                candidate = result["candidates"][0]
+                if "content" in candidate and "parts" in candidate["content"]:
+                    parts = candidate["content"]["parts"]
+                    if len(parts) > 0 and "text" in parts[0]:
+                        return parts[0]["text"].strip()
+            
+            raise ValueError(f"Unexpected response format from Omniroute: {result}")
+    
+    except httpx.HTTPStatusError as e:
+        raise ValueError(f"Omniroute API error: {e.response.status_code} - {e.response.text}")
+    except httpx.RequestError as e:
+        raise ValueError(f"Failed to connect to Omniroute at {omniroute_base_url}: {e}")
