@@ -106,12 +106,13 @@ Update `.env`:
 DATABASE_URL=postgresql://your_username:your_password@localhost:5432/eduplat
 ```
 
-**Option 2: Docker**
+**Option 2: Docker (recommended)**
 
 ```bash
-docker run --name eduplat-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=eduplat -p 5432:5432 -d postgres:15
-docker run --name eduplat-redis -p 6379:6379 -d redis:7
+docker compose up -d
 ```
+
+This starts PostgreSQL 15 (mapped to host port **5433** to avoid conflicts with any native PostgreSQL on 5432) and Redis 7. Credentials match the values in `docker-compose.yml`/`.env.example` (`eduuser`/`edupass123`, database `eduplat`).
 
 ## Current Status (Module 1)
 

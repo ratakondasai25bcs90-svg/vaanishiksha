@@ -2,11 +2,11 @@
 
 ## Current Status
 ✅ Project structure created
-✅ Core backend dependencies installed (FastAPI, SQLAlchemy, Celery, Redis client)
-✅ Frontend structure ready (React + TypeScript)
-⚠️ Heavy ML dependencies (Whisper, PyTorch) NOT installed yet - will install when testing
-⏳ Database and Redis servers need to be started
-⏳ Frontend dependencies need installation
+✅ Backend dependencies installed (FastAPI, SQLAlchemy, Celery, Redis client, faster-whisper, CPU torch, gTTS)
+✅ Frontend dependencies installed (React + TypeScript, node_modules present)
+✅ PostgreSQL + Redis running via Docker Compose (port 5433 / 6379)
+✅ Omniroute LLM translation provider verified (test_omniroute_openai.py)
+⏳ End-to-end dubbing test pending (upload a lecture → dub to 3 languages)
 
 ## What's Built
 
@@ -37,9 +37,8 @@
 
 **Option A: Docker (Recommended)**
 ```powershell
-# Install Docker Desktop if not already installed, then:
-docker run --name eduplat-postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=eduplat -p 5432:5432 -d postgres:15
-docker run --name eduplat-redis -p 6379:6379 -d redis:7
+docker compose up -d
+# PostgreSQL 15 on host port 5433, Redis 7 on 6379 (see docker-compose.yml)
 ```
 
 **Option B: Native Installation**

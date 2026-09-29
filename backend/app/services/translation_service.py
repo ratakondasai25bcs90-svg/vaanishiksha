@@ -1,7 +1,26 @@
 """
 Translation service using IndicTrans2 for Indian language pairs.
-Falls back to LLM-based translation for unsupported pairs.
+Falls back to LLM-based translation for unsupported pairs or if IndicTrans2 is unavailable.
 """
+
+import os
+
+# Map our ISO language codes to IndicTrans2 FLORES-200 codes
+_FLORES_CODE_MAP = {
+    "en": "eng_Latn",
+    "hi": "hin_Deva",
+    "ta": "tam_Taml",
+    "te": "tel_Telu",
+    "kn": "kan_Knda",
+    "bn": "ben_Beng",
+}
+
+# Model checkpoints (distilled 200M variants - practical for CPU inference)
+_EN_INDIC_MODEL = "ai4bharat/indictrans2-en-indic-dist-200M"
+_INDIC_EN_MODEL = "ai4bharat/indictrans2-indic-en-dist-200M"
+
+# Cached loaded models (one per direction; 200M models ~700MB RAM each in fp32)
+_models = {}
 
 
 def translate_text(text: str, source_lang: str, target_lang: str) -> str:
@@ -39,18 +58,90 @@ def _is_indic_language_pair(source_lang: str, target_lang: str) -> bool:
 
 def _translate_with_indictrans2(text: str, source_lang: str, target_lang: str) -> str:
     """
-    Translate using IndicTrans2 model.
-    
-    Note: This is a placeholder. Actual implementation requires:
-    - Installing AI4Bharat IndicTrans2 model
-    - Downloading model weights
-    - Setting up inference pipeline
-    
-    For MVP, we'll use a simpler approach or LLM fallback.
+    Translate using AI4Bharat IndicTrans2 model (HF-compatible checkpoint).
+
+    Uses the distilled 200M checkpoints (practical for CPU inference):
+    - en -> indic: ai4bharat/indictrans2-en-indic-dist-200M
+    - indic -> en: ai4bharat/indictrans2-indic-en-dist-200M
+
+    Note: These are gated repos on HuggingFace. A HF_TOKEN with accepted
+    terms ('share your contact information') is required to download them.
     """
-    # TODO: Implement actual IndicTrans2 integration
-    # For now, fall back to LLM
-    raise NotImplementedError("IndicTrans2 not yet integrated")
+    if source_lang == "en":
+        model_name = _EN_INDIC_MODEL
+    elif target_lang == "en":
+        model_name = _INDIC_EN_MODEL
+    else:
+        raise ValueError(
+            "IndicTrans2 en-indic/indic-en models do not support indic->indic pairs. "
+            "The indic-indic model is not bundled; falling back to LLM."
+        )
+
+    src_flores = _FLORES_CODE_MAP.get(source_lang)
+    tgt_flores = _FLORES_CODE_MAP.get(target_lang)
+    if not src_flores or not tgt_flores:
+        raise ValueError(f"Unsupported language pair for IndicTrans2: {source_lang}->{target_lang}")
+
+    import torch
+    from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+    from IndicTransToolkit.processor import IndicProcessor
+
+    # Lazy-load (and cache) model + tokenizer + processor
+    if model_name not in _models:
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_name, trust_remote_code=True, token=os.getenv("HF_TOKEN")
+        )
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name, trust_remote_code=True, token=os.getenv("HF_TOKEN")
+        )
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = model.to(device).eval()
+        _models[model_name] = (model, tokenizer, device)
+
+    model, tokenizer, device = _models[model_name]
+    ip = IndicProcessor(inference=True)
+
+    # Split long transcripts into sentences for reliable translation
+    sentences = _split_sentences(text, source_lang)
+
+    # Preprocess, tokenize, translate in a single batch
+    batch = ip.preprocess_batch(sentences, src_lang=src_flores, tgt_lang=tgt_flores)
+    inputs = tokenizer(
+        batch,
+        truncation=True,
+        padding="longest",
+        return_tensors="pt",
+        return_attention_mask=True,
+    ).to(device)
+
+    with torch.no_grad():
+        generated_tokens = model.generate(
+            **inputs,
+            use_cache=True,
+            min_length=0,
+            max_length=256,
+            num_beams=5,
+            num_return_sequences=1,
+        )
+
+    with tokenizer.as_target_tokenizer():
+        generated_tokens = tokenizer.batch_decode(
+            generated_tokens,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True,
+        )
+
+    translations = ip.postprocess_batch(generated_tokens, lang=tgt_flores)
+    return " ".join(translations)
+
+
+def _split_sentences(text: str, lang: str) -> list:
+    """Split transcript text into sentence chunks for batch translation."""
+    import re
+    # Simple sentence splitting on common sentence boundaries
+    parts = re.split(r"(?<=[.!?।]) +", text.strip())
+    parts = [p.strip() for p in parts if p.strip()]
+    return parts or [text.strip()]
 
 
 def _translate_with_llm(text: str, source_lang: str, target_lang: str) -> str:
