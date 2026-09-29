@@ -1,9 +1,27 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+from pathlib import Path
+
+# Resolve .env file robustly regardless of the current working directory.
+# The app supports both backend/.env and project-root .env.
+_BACKEND_DIR = Path(__file__).resolve().parent.parent  # backend/
+_PROJECT_ROOT = _BACKEND_DIR.parent                     # project root
+
+_env_files = []
+for candidate in (_BACKEND_DIR / ".env", _PROJECT_ROOT / ".env"):
+    if candidate.exists():
+        _env_files.append(candidate)
+if not _env_files:
+    # Fall back to backend/.env path (will raise a clear error if missing later)
+    _env_files = [_BACKEND_DIR / ".env"]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=tuple(_env_files),
+        case_sensitive=False,
+        extra="ignore",
+    )
     
     # Database
     database_url: str = "sqlite:///./eduplat.db"
