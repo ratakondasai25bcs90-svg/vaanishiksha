@@ -5,8 +5,9 @@
 ✅ Backend dependencies installed (FastAPI, SQLAlchemy, Celery, Redis client, faster-whisper, CPU torch, gTTS)
 ✅ Frontend dependencies installed (React + TypeScript, node_modules present)
 ✅ PostgreSQL + Redis running via Docker Compose (port 5433 / 6379)
-✅ Omniroute LLM translation provider verified (test_omniroute_openai.py)
-⏳ End-to-end dubbing test pending (upload a lecture → dub to 3 languages)
+✅ Omniroute LLM translation provider verified (cl/anthropic/claude-opus-4.8)
+✅ **Module 1 COMPLETE — end-to-end dubbing pipeline verified (English → Hindi, Tamil, Kannada)**
+⏳ Module 2: Auto worksheet generation (ready to start)
 
 ## What's Built
 

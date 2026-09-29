@@ -67,7 +67,8 @@ def process_lecture_dubbing(dubbed_lecture_id: int):
         
         # Step 3: Generate dubbed audio
         from app.services.tts_service import text_to_speech
-        dubbed_audio_filename = f"dubbed_{lecture.id}_{target_language}.wav"
+        # gTTS always writes MP3; keep extension consistent with actual content
+        dubbed_audio_filename = f"dubbed_{lecture.id}_{target_language}.mp3"
         dubbed_audio_path = f"{settings.storage_path}/dubbed/{dubbed_audio_filename}"
         
         text_to_speech(translated_text, target_language, dubbed_audio_path)

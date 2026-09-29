@@ -15,18 +15,11 @@ def transcribe_audio(audio_file_path: str, language: str = None) -> str:
     # Use faster-whisper for better performance
     # Model size: tiny, base, small, medium, large
     model = WhisperModel("small", device="cpu", compute_type="int8")
-    
-    # Map language codes to Whisper language names
-    lang_map = {
-        "en": "english",
-        "hi": "hindi",
-        "ta": "tamil",
-        "te": "telugu",
-        "kn": "kannada",
-        "bn": "bengali"
-    }
-    
-    whisper_lang = lang_map.get(language, language) if language else None
+
+    # faster-whisper expects ISO-639-1 codes (e.g. 'en', 'hi', 'ta').
+    # Our supported languages (en, hi, ta, te, kn, bn) are all valid whisper
+    # codes, so pass them through directly. When None, Whisper auto-detects.
+    whisper_lang = language if language else None
     
     segments, info = model.transcribe(
         audio_file_path,

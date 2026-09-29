@@ -180,7 +180,7 @@ Translation:"""
         "Authorization": f"Bearer {settings.gemini_api_key}"
     }
     payload = {
-        "model": "kr/claude-sonnet-4.5",
+        "model": "cl/anthropic/claude-opus-4.8",
         "messages": [
             {"role": "user", "content": prompt}
         ]
